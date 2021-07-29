@@ -3,22 +3,25 @@ class Customer < ActiveRecord::Base
     has_many :coffees, through: :orders
 
     def self.names
-        self.pluck(:name)
+        pluck(:name)
     end
 
     def order_coffee(coffee_title, price)
-        Order.create(customer_id: self.id, coffee_id: Coffee.find_or_create_by(title: coffee_title).id, price: price)
-        #orders.all.last.receipt this should work but self.orders.all doesn't show the recently added coffee order. 
-        Order.all.where("customer_id = ?", id).last.receipt
+        coffee = Coffee.find_or_create_by(title: coffee_title)
+        order = Order.create(customer_id: id, coffee_id: coffee.id, price: price)
+        
+        order.receipt
     end
 
     def total_purchases_amount
-        #orders.pluck(:price).sum this should work, but it's not getting the newest coffee after doing order_coffee
-        Order.all.where("customer_id = ?", id).pluck(:price).sum
+        orders.sum(:price)
     end
 
     def dislike_coffee(coffee_title)
-        puts "#{name} has been refunded $#{orders.find_by(coffee_id: Coffee.find_by(title: coffee_title).id).price}"
-        orders.find_by(coffee_id: Coffee.find_by(title: coffee_title).id).destroy
+        coffee = Coffee.find_by(title: coffee_title)
+        last_coffee_order = orders.where("coffee_id = ?", coffee.id).last
+        
+        last_coffee_order.destroy
+        puts "#{name} has been refunded $#{order.price}"
     end
 end
